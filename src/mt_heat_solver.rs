@@ -32,14 +32,14 @@ pub fn solve_heat_equation(length: f64, temperature: f64, points: usize, dt: f64
     let mut u_new = vec![0.0; points + 1];
     u[points] = temperature;
 
-    let mut a = vec![-alpha; points - 1];
-    let mut b = vec![1.0 + 2.0 * alpha; points - 1];
-    let mut c = vec![-alpha; points - 1];
+    let a = vec![-alpha; points - 1];
+    let b = vec![1.0 + 2.0 * alpha; points - 1];
+    let c = vec![-alpha; points - 1];
     let mut d = vec![0.0; points - 1];
 
     // Итерации по времени
     for _ in 0..time_steps {
-        // Update d in parallel, excluding boundary points
+        // Обновление d параллельно, исключая граничные точки
         d.par_iter_mut()
             .enumerate()
             .for_each(|(i, d_val)| {
@@ -50,15 +50,15 @@ pub fn solve_heat_equation(length: f64, temperature: f64, points: usize, dt: f64
         d[0] += alpha * 0.0;  // Граничное условие на левой границе (U(0, t) = 0)
         d[points - 2] += alpha * temperature;  // Граничное условие на правой границе (U(L, t) = T)
 
-        // Решаем систему уравнений методом прогонки (single-threaded part)
+        // Решаем систему уравнений методом прогонки (single-threaded)
         solve_tridiagonal(&a, &b, &c, &mut d);
 
-        // Update u_new in parallel
+        // Обновление u_new параллельно
         u_new
             .par_iter_mut()
             .enumerate()
-            .skip(1) // Skip boundary point 0
-            .take(points - 1) // Skip boundary point `points`
+            .skip(1) // Пропускаем граничное значение 1
+            .take(points - 1) // Пропускаем граничное значение `points`
             .for_each(|(i, u_val)| {
                 *u_val = d[i - 1];  // Копируем значения из решения
             });
