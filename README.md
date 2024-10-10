@@ -34,9 +34,23 @@ rustc --version
 
 # Компиляция проекта
 cargo build
+# или
+cargo build --release
 
 # Запуск проекта
 cargo run
+```
+
+### Установка MPI
+MS MPI: https://www.microsoft.com/en-us/download/details.aspx?id=100593  
+- После установки добавить в путь MSMPI_INC (C:\Program Files (x86)\Microsoft SDKs\MPI\Include) и MSMPI_LIB64 (C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64)
+
+LLVM: https://releases.llvm.org/
+- После установки добавить в путь LIBCLANG_PATH (C:\Program Files\LLVM\bin)
+
+```bash
+# Запуск проекта
+mpiexec -n 4 target/release/heat_solver
 ```
 
 ### Ресурсы
