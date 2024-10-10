@@ -66,5 +66,5 @@ pub fn solve_heat_equation(length: f64, temperature: f64, points: usize, dt: f64
       u.copy_from_slice(&u_new);  // Копируем новое решение на текущий шаг
   }
 
-  (u, start_time.elapsed().as_millis())
+  (u, start_time.elapsed().as_micros())
 }

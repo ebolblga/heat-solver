@@ -1,5 +1,6 @@
 use eframe::egui;
 mod st_heat_solver;
+mod mt_heat_solver;
 
 struct MyApp {
     length: f64,
@@ -37,46 +38,67 @@ impl MyApp {
         self.result = Some(solution);
         self.compute_time = Some(time);
     }
+
+    fn solve_lab_2(&mut self) {
+        let (solution, time) = mt_heat_solver::solve_heat_equation(
+            self.length,
+            self.temp_right,
+            self.points,
+            self.dt,
+            self.time_steps,
+        );
+        self.result = Some(solution);
+        self.compute_time = Some(time);
+    }
 }
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        // Виджет панели управления
+        eframe::egui::Window::new("Параметры задачи")
+            .resizable(true)
+            .collapsible(false)
+            .show(ctx, |ui| {
+                // Поля для ввода значений
+                ui.add(eframe::egui::Slider::new(&mut self.length, 1.0..=100.0).text("Длина стержня (L)"));
+                ui.add(eframe::egui::Slider::new(&mut self.temp_right, 10.0..=500.0).text("Температура справа (T)"));
+                ui.add(eframe::egui::Slider::new(&mut self.points, 10..=500).text("Количество точек (N)"));
+                ui.add(eframe::egui::Slider::new(&mut self.dt, 0.001..=0.1).text("Шаг по времени (dt)"));
+                ui.add(eframe::egui::Slider::new(&mut self.time_steps, 10..=1000).text("Количество временных шагов"));
+
+                // Кнопка для расчёта
+                if ui.button("Однопоточное решение").clicked() {
+                    self.solve_lab_1();
+                }
+
+                if ui.button("Многопоточное решение").clicked() {
+                    self.solve_lab_2();
+                }
+            });
+
+        // Гистограмма
         eframe::egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("Введите параметры для Лабораторной 1:");
-
-            // Поля для ввода значений
-            ui.add(eframe::egui::Slider::new(&mut self.length, 1.0..=100.0).text("Длина стержня (L)"));
-            ui.add(eframe::egui::Slider::new(&mut self.temp_right, 10.0..=500.0).text("Температура справа (T)"));
-            ui.add(eframe::egui::Slider::new(&mut self.points, 10..=500).text("Количество точек (N)"));
-            ui.add(eframe::egui::Slider::new(&mut self.dt, 0.001..=0.1).text("Шаг по времени (dt)"));
-            ui.add(eframe::egui::Slider::new(&mut self.time_steps, 10..=1000).text("Количество временных шагов"));
-
-            // Кнопка для расчёта
-            if ui.button("Однопоточное решение").clicked() {
-                self.solve_lab_1();
-            }
-
-            // Вывод гистограммы, если есть результат
             if let Some(result) = &self.result {
                 let max_value = result.iter().cloned().fold(f64::NAN, f64::max);
-
                 let available_size = ui.available_size();
+
+                let bar_width = available_size.x / result.len() as f32;
                 for (i, value) in result.iter().enumerate() {
                     let height = value / max_value * available_size.y as f64;
                     ui.painter().rect_filled(
                         eframe::egui::Rect::from_min_size(
-                            eframe::egui::pos2(i as f32 * 5.0, available_size.y - height as f32),
-                            eframe::egui::vec2(4.0, height as f32),
+                            eframe::egui::pos2(i as f32 * bar_width, available_size.y - height as f32),
+                            eframe::egui::vec2(bar_width - 1.0, height as f32),  // Slight margin between bars
                         ),
                         0.0,
-                        eframe::egui::Color32::from_rgb(100, 150, 250),
+                        eframe::egui::Color32::from_rgb(245, 134, 141),
                     );
                 }
             }
 
-            // Вывод времени расчета, если оно доступно
+            // Время расчёта
             if let Some(time) = self.compute_time {
-                ui.label(format!("Время расчета: {} мс", time));
+                ui.label(format!("Время расчета: {} мкс", time));
             }
         });
     }
