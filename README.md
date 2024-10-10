@@ -20,5 +20,28 @@
 
 Требуется написать программу численного решения краевой задачи для уравнения теплопроводности неявной четырехточечной конечно-разностной схемой:
 - [x] Однопоточно
-- [ ] Многопоточно
+- [x] Многопоточно
 - [ ] Через MPI (Message Passing Interface)
+
+![image](https://github.com/user-attachments/assets/bf887ee7-aecd-4f3d-ae31-f53ab0cb9f1b)
+
+### Как запустить
+```bash
+# Установка Rust и Cargo: https://www.rust-lang.org/tools/install
+
+# Проверка версии Rust
+rustc --version
+
+# Компиляция проекта
+cargo build
+
+# Запуск проекта
+cargo run
+```
+
+### Ресурсы
+egui: https://github.com/emilk/egui  
+egui documentation: https://docs.rs/egui/latest/egui/  
+
+### Лицензия
+Эта программа распространяется под лицензией MIT License. Пожалуйста, прочтите файл лицензии, чтобы узнать об условиях использования.
