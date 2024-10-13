@@ -18,9 +18,9 @@ impl Default for MyApp {
         Self {
             length: 10.0,
             temp_right: 100.0,
-            points: 100,
+            points: 500,
             dt: 0.01,
-            time_steps: 100,
+            time_steps: 800,
             result: None,
             compute_time: None
         }
