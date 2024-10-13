@@ -1,7 +1,4 @@
-extern crate mpi;
-use mpi::topology::Communicator;
 use mpi::traits::*;
-use mpi::request::WaitGuard;
 use std::time::Instant;
 
 pub fn solve_tridiagonal(a: &Vec<f64>, b: &Vec<f64>, c: &Vec<f64>, d: &mut Vec<f64>) {
@@ -9,7 +6,7 @@ pub fn solve_tridiagonal(a: &Vec<f64>, b: &Vec<f64>, c: &Vec<f64>, d: &mut Vec<f
     let mut alpha = vec![0.0; n];
     let mut beta = vec![0.0; n];
 
-    // Forward elimination
+    // Forward sweep
     alpha[0] = -c[0] / b[0];
     beta[0] = d[0] / b[0];
 
@@ -31,129 +28,94 @@ pub fn solve_heat_equation_mpi(
     points: usize,
     dt: f64,
     time_steps: usize,
-    world: mpi::topology::SystemCommunicator
 ) -> (Vec<f64>, u128) {
     let start_time = Instant::now();
+
+    let universe = mpi::initialize().unwrap();
+    let world = universe.world();
+    let rank = world.rank();
+    let size = world.size();
 
     let dx = length / (points as f64);
     let alpha = dt / (dx * dx);
 
-    let rank = world.rank();      // Current process rank
-    let size = world.size();      // Number of processes
+    // Determine the local range of points for each process
+    let local_n = points / size as usize;
+    let local_start = rank as usize * local_n + 1;
+    let local_end = if rank == size - 1 {
+        points - 1
+    } else {
+        (rank as usize + 1) * local_n
+    };
 
-    // Divide the domain among processes
-    let local_points = points / size as usize;  // Number of points per process
-    let mut u = vec![0.0; local_points + 2];  // Solution vector (with ghost cells)
-    let mut u_new = vec![0.0; local_points + 2];
+    let mut u_local = vec![0.0; local_n + 2]; // +2 for ghost points at the boundaries
+    let mut u_new_local = vec![0.0; local_n + 2];
 
     if rank == size - 1 {
-        u[local_points + 1] = temperature;  // Rightmost process applies temperature at the boundary
+        u_local[local_n + 1] = temperature; // Right boundary condition
     }
 
-    let mut a = vec![-alpha; local_points];
-    let mut b = vec![1.0 + 2.0 * alpha; local_points];
-    let mut c = vec![-alpha; local_points];
-    let mut d = vec![0.0; local_points];
+    let a = vec![-alpha; local_n];
+    let b = vec![1.0 + 2.0 * alpha; local_n];
+    let c = vec![-alpha; local_n];
+    let mut d = vec![0.0; local_n];
 
+    // Time iteration loop
     for _ in 0..time_steps {
-        for i in 1..=local_points {
-            d[i - 1] = u[i];  // Copy local part of the solution to d
+        // Fill the `d` vector (right-hand side) based on the current temperature values
+        for i in 0..local_n {
+            d[i] = u_local[i + 1];
         }
 
-        // Communicate boundary values with neighbors
-        let left = if rank > 0 {
-            Some(world.process_at_rank(rank - 1))
-        } else {
-            None
-        };
-
-        let right = if rank < size - 1 {
-            Some(world.process_at_rank(rank + 1))
-        } else {
-            None
-        };
-
-        let send_left = if rank > 0 {
-            Some(left.unwrap().immediate_send(&u[1]))  // Send the first internal point to the left neighbor
-        } else {
-            None
-        };
-
-        let send_right = if rank < size - 1 {
-            Some(right.unwrap().immediate_send(&u[local_points]))  // Send the last internal point to the right neighbor
-        } else {
-            None
-        };
-
-        let mut left_ghost = 0.0;
-        let mut right_ghost = 0.0;
-
-        if rank > 0 {
-            left.unwrap().receive_into(&mut left_ghost);  // Receive from the left neighbor
+        if rank == 0 {
+            d[0] += alpha * 0.0; // Left boundary condition
         }
-        if rank < size - 1 {
-            right.unwrap().receive_into(&mut right_ghost);  // Receive from the right neighbor
+        if rank == size - 1 {
+            d[local_n - 1] += alpha * temperature; // Right boundary condition
         }
 
-        // Wait for non-blocking sends to complete
-        if let Some(send) = send_left {
-            send.wait();
-        }
-        if let Some(send) = send_right {
-            send.wait();
-        }
-
-        // Apply boundary conditions
-        if rank > 0 {
-            d[0] += alpha * left_ghost;  // Left boundary (from neighbor)
-        } else {
-            d[0] += alpha * 0.0;  // Left boundary (fixed at 0.0)
-        }
-
-        if rank < size - 1 {
-            d[local_points - 1] += alpha * right_ghost;
-        } else {
-            d[local_points - 1] += alpha * temperature;
-        }
-
-        // Solve the tridiagonal system
+        // Solve tridiagonal system locally
         solve_tridiagonal(&a, &b, &c, &mut d);
 
-        // Update the solution
-        for i in 1..=local_points {
-            u_new[i] = d[i - 1];
+        // Exchange ghost points with neighboring processes
+        if rank > 0 {
+            // Send left boundary value to the left neighbor and receive from the left
+            world.process_at_rank(rank - 1).send(&u_local[1]);
+            u_local[0] = world.process_at_rank(rank - 1).receive::<f64>().0;
         }
 
-        u.copy_from_slice(&u_new);  // Copy new values to u
+        if rank < size - 1 {
+            // Send right boundary value to the right neighbor and receive from the right
+            world.process_at_rank(rank + 1).send(&u_local[local_n]);
+            u_local[local_n + 1] = world.process_at_rank(rank + 1).receive::<f64>().0;
+        }
+
+        // Update local temperature array
+        for i in 0..local_n {
+            u_new_local[i + 1] = d[i];
+        }
+
+        u_local.copy_from_slice(&u_new_local);
     }
 
-    // Gather all results on root (rank 0) for final result
+    // Gather the results to rank 0
     let mut final_result = if rank == 0 {
         vec![0.0; points + 1]
     } else {
         vec![]
     };
 
-    world
-        .gather_into_root(&u[1..=local_points], &mut final_result);
+    world.all_gather_into(&u_local[1..local_n + 1], &mut final_result[local_start..local_end]);
 
-    (final_result, start_time.elapsed().as_micros())
-}
+    // Ensure boundary conditions
+    if rank == 0 {
+        final_result[points] = temperature; // Right boundary condition
+    }
 
-fn main() {
-    let universe = mpi::initialize().unwrap();
-    let world = universe.world();
-
-    let length = 10.0;
-    let temperature = 100.0;
-    let points = 100;
-    let dt = 0.01;
-    let time_steps = 1000;
-
-    let (final_result, duration) = solve_heat_equation_mpi(length, temperature, points, dt, time_steps, world);
-
-    if world.rank() == 0 {
-        println!("Final result: {:?}", final_result);
-        println!("Execution time: {} microseconds", duration);
+    // Return result on the root process
+    if rank == 0 {
+        (final_result, start_time.elapsed().as_micros())
+    } else {
+        (vec![], 0) // Return empty result for non-root processes
     }
 }

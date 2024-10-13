@@ -1,7 +1,7 @@
 use eframe::egui;
 mod st_heat_solver;
 mod mt_heat_solver;
-// mod mpi_heat_solver;
+mod mpi_heat_solver;
 
 struct MyApp {
     length: f64,
@@ -53,15 +53,28 @@ impl MyApp {
     }
 
     fn solve_lab_3(&mut self) {
-        let (solution, time) = mt_heat_solver::solve_heat_equation(
-            self.length,
-            self.temp_right,
-            self.points,
-            self.dt,
-            self.time_steps,
-        );
-        self.result = Some(solution);
-        self.compute_time = Some(time);
+        let length = self.length;
+        let temp_right = self.temp_right;
+        let points = self.points;
+        let dt = self.dt;
+        let time_steps = self.time_steps;
+
+        // Create a separate thread for the MPI computation
+        let handle = std::thread::spawn(move || {
+            mpi_heat_solver::solve_heat_equation_mpi(length, temp_right, points, dt, time_steps)
+        });
+
+        // Wait for the thread to finish and collect the result
+        match handle.join() {
+            Ok((solution, time)) => {
+                self.result = Some(solution);
+                self.compute_time = Some(time);
+            }
+            Err(_) => {
+                // Handle the error case
+                eprintln!("Error occurred during MPI computation.");
+            }
+        }
     }
 }
 
