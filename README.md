@@ -21,9 +21,9 @@
 Требуется написать программу численного решения краевой задачи для уравнения теплопроводности неявной четырехточечной конечно-разностной схемой:
 - [x] Однопоточно
 - [x] Многопоточно
-- [ ] Через MPI (Message Passing Interface)
+- [x] Через MPI (Message Passing Interface)
 
-![image](https://github.com/user-attachments/assets/bf887ee7-aecd-4f3d-ae31-f53ab0cb9f1b)
+![image](https://github.com/user-attachments/assets/09e8c687-3bc9-4225-a7b4-c357f3129037)
 
 ### Как запустить
 ```bash
@@ -39,6 +39,9 @@ cargo build --release
 
 # Запуск проекта
 cargo run
+
+# Запуск проекта с MPI
+mpiexec -n 1 cargo run
 ```
 
 ### Установка MPI
@@ -49,13 +52,23 @@ LLVM: https://releases.llvm.org/
 - После установки добавить в путь LIBCLANG_PATH (C:\Program Files\LLVM\bin)
 
 ```bash
-# Запуск проекта
-mpiexec -n 4 target/release/heat_solver
-```
+# Проверка версии Clang
+clang --version
 
-### Ресурсы
+# Компиляция проекта
+cargo build
+
+# Запуск проекта
+mpiexec -n 1 cargo run
+``` 
+
+### Зависимости
 egui: https://github.com/emilk/egui  
 egui documentation: https://docs.rs/egui/latest/egui/  
+rayon: https://github.com/rayon-rs/rayon  
+rayon documentation: https://docs.rs/rayon/latest/rayon/  
+rsmpi: https://github.com/rsmpi/rsmpi  
+rsmpi documentation: https://rsmpi.github.io/rsmpi/mpi/index.html  
 
 ### Лицензия
 Эта программа распространяется под лицензией MIT License. Пожалуйста, прочтите файл лицензии, чтобы узнать об условиях использования.
