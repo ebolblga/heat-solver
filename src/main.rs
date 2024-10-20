@@ -18,7 +18,7 @@ impl Default for MyApp {
         Self {
             length: 10.0,
             temp_right: 100.0,
-            points: 500,
+            points: 100000,
             dt: 0.01,
             time_steps: 800,
             result: None,
@@ -87,7 +87,7 @@ impl eframe::App for MyApp {
             .show(ctx, |ui| {
                 // Поля для ввода значений
                 ui.add(egui::Slider::new(&mut self.temp_right, 10.0..=500.0).text("Температура справа (T)"));
-                ui.add(egui::Slider::new(&mut self.points, 10..=500).text("Количество точек (N)"));
+                ui.add(egui::Slider::new(&mut self.points, 10..=100000).text("Количество точек (N)"));
                 ui.add(egui::Slider::new(&mut self.dt, 0.001..=0.1).text("Шаг по времени (dt)"));
                 ui.add(egui::Slider::new(&mut self.time_steps, 10..=10000).text("Количество временных шагов"));
 
@@ -106,22 +106,60 @@ impl eframe::App for MyApp {
             });
 
         // Гистограмма
+        // egui::CentralPanel::default().show(ctx, |ui| {
+        //     if let Some(result) = &self.result {
+        //         let max_value = result.iter().cloned().fold(f64::NAN, f64::max);
+        //         let available_size = ui.available_size();
+
+        //         let bar_width = available_size.x / result.len() as f32;
+        //         for (i, value) in result.iter().enumerate() {
+        //             let height = value / max_value * available_size.y as f64;
+        //             ui.painter().rect_filled(
+        //                 egui::Rect::from_min_size(
+        //                     egui::pos2(i as f32 * bar_width, available_size.y - height as f32),
+        //                     egui::vec2(bar_width - 1.0, height as f32),  // Небольшой промежуток между столбцами
+        //                 ),
+        //                 0.0,
+        //                 egui::Color32::from_rgb(245, 134, 141),
+        //             );
+        //         }
+        //     }
+
+        //     // Время расчёта
+        //     if let Some(time) = self.compute_time {
+        //         ui.label(format!("Время расчета: {} мкс", time));
+        //         ui.label(format!("=~ {} мс", time / 1000));
+        //         ui.label(format!("=~ {} с", time / 1000000));
+        //     }
+        // });
+
+        // Линейный график
         egui::CentralPanel::default().show(ctx, |ui| {
             if let Some(result) = &self.result {
                 let max_value = result.iter().cloned().fold(f64::NAN, f64::max);
                 let available_size = ui.available_size();
 
-                let bar_width = available_size.x / result.len() as f32;
-                for (i, value) in result.iter().enumerate() {
-                    let height = value / max_value * available_size.y as f64;
-                    ui.painter().rect_filled(
-                        egui::Rect::from_min_size(
-                            egui::pos2(i as f32 * bar_width, available_size.y - height as f32),
-                            egui::vec2(bar_width - 1.0, height as f32),  // Небольшой промежуток между столбцами
-                        ),
-                        0.0,
-                        egui::Color32::from_rgb(245, 134, 141),
+                // Вычисление ширины между точками на графике
+                let point_spacing = available_size.x / (result.len() - 1) as f32;
+                let mut previous_point = None;
+
+                // Итерация по значениям массива, исключая последнюю точку
+                for (i, value) in result.iter().take(result.len() - 1).enumerate() {
+                    let normalized_value = value / max_value;
+                    let current_point = egui::pos2(
+                        i as f32 * point_spacing,
+                        available_size.y - (normalized_value * available_size.y as f64) as f32,
                     );
+
+                    if let Some(prev) = previous_point {
+                        // Рисование линии между предыдущей и текущей точкой
+                        ui.painter().line_segment(
+                            [prev, current_point],
+                            egui::Stroke::new(2.0, egui::Color32::from_rgb(245, 134, 141)),
+                        );
+                    }
+
+                    previous_point = Some(current_point);
                 }
             }
 
@@ -129,6 +167,7 @@ impl eframe::App for MyApp {
             if let Some(time) = self.compute_time {
                 ui.label(format!("Время расчета: {} мкс", time));
                 ui.label(format!("=~ {} мс", time / 1000));
+                ui.label(format!("=~ {} с", time / 1000000));
             }
         });
     }

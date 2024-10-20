@@ -7,15 +7,15 @@
 - L - длина стержня (задается пользователем);
 - T - температура (задается пользователем).
 
-𝑈𝑡 = 𝑈𝑥𝑥  
+𝑈𝑡 = 𝑈𝑥𝑥
 
-начальное условие:  
+начальное условие:
 
-𝑈(𝑥,𝑡 = 0) = 0;  
+𝑈(𝑥,𝑡 = 0) = 0;
 
-граничные условия:  
+граничные условия:
 
-𝑈(𝑥 = 0,𝑡) = 0;  
+𝑈(𝑥 = 0,𝑡) = 0;
 𝑈(𝑥 = 𝐿,𝑡) = 𝑇;
 
 Требуется написать программу численного решения краевой задачи для уравнения теплопроводности неявной четырехточечной конечно-разностной схемой:
@@ -40,12 +40,18 @@ cargo build --release
 # Запуск проекта
 cargo run
 
+# Если требуется очистить кэш cargo (удаляет /target)
+cargo clean
+
+# Обновить все пакеты
+cargo update
+
 # Запуск проекта с MPI
 mpiexec -n 1 cargo run
 ```
 
 ### Установка MPI
-MS MPI: https://www.microsoft.com/en-us/download/details.aspx?id=100593  
+MS MPI: https://www.microsoft.com/en-us/download/details.aspx?id=100593
 - После установки добавить в путь MSMPI_INC (C:\Program Files (x86)\Microsoft SDKs\MPI\Include) и MSMPI_LIB64 (C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64)
 
 LLVM: https://releases.llvm.org/
@@ -60,15 +66,15 @@ cargo build
 
 # Запуск проекта
 mpiexec -n 1 cargo run
-``` 
+```
 
 ### Зависимости
-egui: https://github.com/emilk/egui  
-egui documentation: https://docs.rs/egui/latest/egui/  
-rayon: https://github.com/rayon-rs/rayon  
-rayon documentation: https://docs.rs/rayon/latest/rayon/  
-rsmpi: https://github.com/rsmpi/rsmpi  
-rsmpi documentation: https://rsmpi.github.io/rsmpi/mpi/index.html  
+egui: https://github.com/emilk/egui
+egui documentation: https://docs.rs/egui/latest/egui/
+rayon: https://github.com/rayon-rs/rayon
+rayon documentation: https://docs.rs/rayon/latest/rayon/
+rsmpi: https://github.com/rsmpi/rsmpi
+rsmpi documentation: https://rsmpi.github.io/rsmpi/mpi/index.html
 
 ### Лицензия
 Эта программа распространяется под лицензией MIT License. Пожалуйста, прочтите файл лицензии, чтобы узнать об условиях использования.
